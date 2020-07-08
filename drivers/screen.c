@@ -1,6 +1,6 @@
 #include "screen.h"
-#include "ports.h"
-#include "../kernel/util.h"
+#include "../cpu/ports.h"
+#include "../libc/mem.h"
 
 /* private function declarations */
 int get_cursor_offset();
@@ -25,6 +25,7 @@ void kprint_at(char *message, int col, int row)
 		col = get_offset_col(offset);
 	}
 
+
 	int i = 0;
 	while (message[i] != 0) {
 		offset = print_char(message[i++], col, row, WHITE_ON_BLACK);
@@ -38,11 +39,20 @@ void kprint(char *message)
 	kprint_at(message, -1, -1);
 }
 
+void kprint_backspace()
+{
+	int offset = get_cursor_offset()-2;
+	int row = get_offset_row(offset);
+	int col = get_offset_col(offset);
+	print_char(0x08, col, row, WHITE_ON_BLACK);
+}
+
 /************************************
 * Private kernel functions          *
 ************************************/
 
 /* print a char on the screen at col, row, or at cursor position */
+
 int print_char(char c, int col, int row, char attr)
 {
 	/* create a byte (char) pointer to the start of video memory */
@@ -51,6 +61,13 @@ int print_char(char c, int col, int row, char attr)
 	/* if attribute byte is zero, assume default style */
 	if (!attr)
 		attr = WHITE_ON_BLACK;
+	
+	/* check for errors: print a red 'E' if the coordinates aren't right */
+	if (col >= MAX_COLS || row >= MAX_ROWS) {
+		vidmem[2*(MAX_COLS)*(MAX_ROWS)-2] = 'E';
+		vidmem[2*(MAX_COLS)*(MAX_ROWS)-1] = RED_ON_WHITE;
+		return get_offset(col, row);
+	}
 	
 	/* get video memory offset for the screen location */
 	int offset;
@@ -76,8 +93,8 @@ int print_char(char c, int col, int row, char attr)
 	if (offset >= MAX_ROWS * MAX_COLS * 2) {
 		int i;
 		for (i = 1; i < MAX_ROWS; i++) {
-			memory_copy((char *) get_offset(0, i) + VIDEO_ADDRESS,
-					(char *) get_offset(0, i-1) + VIDEO_ADDRESS,
+			memory_copy((u8*) get_offset(0, i) + VIDEO_ADDRESS,
+					(u8*) get_offset(0, i-1) + VIDEO_ADDRESS,
 					MAX_COLS * 2);
 		}
 
@@ -100,9 +117,9 @@ int get_cursor_offset()
 	1) get high byte of the cursor offset (data 14)
 	2) get low byte (data 15) */
 	
-	port_byte_out(REG_SCREEN_CTL, 14);
+	port_byte_out(REG_SCREEN_CTRL, 14);
 	int offset = port_byte_in(REG_SCREEN_DATA) << 8;
-	port_byte_out(REG_SCREEN_CTL, 15);
+	port_byte_out(REG_SCREEN_CTRL, 15);
 	offset += port_byte_in(REG_SCREEN_DATA);
 	return offset * 2; // position * size of char cell
 }
@@ -112,9 +129,9 @@ void set_cursor_offset(int offset)
 	/* similar to get_cursor_offset, but instead of reading this is writing data */
 
 	offset /= 2;
-	port_byte_out(REG_SCREEN_CTL, 14);
+	port_byte_out(REG_SCREEN_CTRL, 14);
 	port_byte_out(REG_SCREEN_DATA, (unsigned char)(offset >> 8));
-	port_byte_out(REG_SCREEN_CTL, 15);
+	port_byte_out(REG_SCREEN_CTRL, 15);
 	port_byte_out(REG_SCREEN_DATA, (unsigned char)(offset & 0xff));
 }
 
@@ -122,7 +139,7 @@ void clear_screen()
 {
 	int screen_size = MAX_COLS * MAX_ROWS;
 	int i;
-	char *screen = (unsigned char *) VIDEO_ADDRESS;
+	u8 *screen = (u8*) VIDEO_ADDRESS;
 
 	for (i = 0; i < screen_size; i++) {
 		screen[i*2] = ' ';

@@ -33,7 +33,8 @@ load_kernel:
 	call print_nl
 
 	mov bx, KERNEL_OFFSET		; setup parameters for our disk_load routine so that we load the first
-	mov dh, 15			; 15 sectors (excluding the boot sector) from the boot disk (i.e. our
+	; mov dh, 15			; 15 sectors (excluding the boot sector) from the boot disk (i.e. our
+	mov dh, 31
 	mov dl, [BOOT_DRIVE]		; kernel code) to address KERNEL_OFFSET
 	call disk_load
 
