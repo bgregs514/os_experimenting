@@ -1,0 +1,14 @@
+C/Kernel Compilation to .bin
+gcc -m32 -fno-pie -ffreestanding -c basic.c -o basic.o
+ld -m elf_i386 -o basic.bin -Ttext 0x1000 --oformat binary basic.o
+ndisasm -b 32 basic.bin > basic.dis
+
+ASM Compilation to .bin
+nasm -f bin boot_sect_simple.asm -o boot_sect_simple.bin
+
+Kernel Image File Compilation
+cat boot_sect_simple.bin c/kernel.bin > os-image
+
+QEMU Load Kernel Image File
+qemu-system-x86_64 -fda os-image
+
