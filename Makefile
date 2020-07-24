@@ -1,5 +1,5 @@
 CC 		= gcc
-CFLAGS		= -m32 -fno-pie -ffreestanding -g -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
+CFLAGS		= -m32 -fno-pie -ffreestanding -g -fno-builtin -fno-stack-protector \
 			-nostartfiles -nodefaultlibs -Wall -Wextra -Werror
 C_SOURCES	= $(wildcard kernel/*.c drivers/*.c cpu/*.c libc/*.c)
 HEADERS		= $(wildcard kernel/*.h drivers/*.h cpu/*.h libc/*.h)
